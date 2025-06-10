@@ -2,52 +2,51 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Sample sentiment data
+# Expanded sample data
 data = {
-    'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-    'Positive': [60, 55, 50, 65, 55],
-    'Neutral': [35, 40, 30, 30, 35],
-    'Negative': [5, 5, 20, 5, 10],
-    'Highlight': [
-        "Flavor-of-the-month excitement",
-        "Snowman creations & CNY promos",
-        "Dubai Chocolate Cake buzz",
-        "Project 2025 engagement",
-        "Kunafa trend & Raya treats"
-    ],
-    'Trending Topics': [
-        "Club 31 app, new flavor",
-        "CNY packaging, dry ice",
-        "Dubai cake complaints",
-        "Sundaes, community drive",
-        "Kunafa, Ramadan promos"
+    'Month': ['Feb', 'Mar', 'Apr', 'May'] * 3,
+    'Platform': ['TikTok'] * 4 + ['Instagram'] * 4 + ['Reddit'] * 4,
+    'Sentiment': ['Positive', 'Neutral', 'Positive', 'Positive',
+                  'Neutral', 'Neutral', 'Negative', 'Neutral',
+                  'Positive', 'Positive', 'Negative', 'Neutral'],
+    'Mentions': [550, 120, 580, 600, 210, 180, 90, 100, 150, 160, 110, 130],
+    'Theme': [
+        'Great campaigns', 'Spicy not spicy', 'Great campaigns', 'Great campaigns',
+        'Spicy not spicy', 'Sauce missing', 'Dry chicken', 'Service issues',
+        'Great campaigns', 'Great campaigns', 'Dry chicken', 'Service issues'
     ]
 }
 
 df = pd.DataFrame(data)
 
-st.set_page_config(page_title="Baskin Robbins MY Sentiment Tracker", layout="wide")
-st.title("🇲🇾 Baskin Robbins Malaysia - Social Sentiment Dashboard (Jan–May 2025)")
+st.set_page_config(page_title="BR Social Intelligence Dashboard", layout="wide")
+st.title("🍦 Baskin Robbins Malaysia - Social Intelligence Dashboard")
 
-# Sentiment Line Chart
-fig_line = px.line(df, x='Month', y=['Positive', 'Neutral', 'Negative'],
-                  markers=True, title="Monthly Sentiment Trends")
-st.plotly_chart(fig_line, use_container_width=True)
+# Filters
+months = st.multiselect("Select Month(s):", sorted(df['Month'].unique()), default=sorted(df['Month'].unique()))
+platforms = st.multiselect("Select Platform(s):", sorted(df['Platform'].unique()), default=sorted(df['Platform'].unique()))
+filtered_df = df[df['Month'].isin(months) & df['Platform'].isin(platforms)]
 
-# Sentiment Pie Chart for Selected Month
-month_choice = st.selectbox("Select a Month for Breakdown:", df['Month'])
-selected = df[df['Month'] == month_choice].iloc[0]
-fig_pie = px.pie(
-    names=['Positive', 'Neutral', 'Negative'],
-    values=[selected['Positive'], selected['Neutral'], selected['Negative']],
-    title=f"Sentiment Distribution - {month_choice} 2025"
-)
-st.plotly_chart(fig_pie, use_container_width=True)
+# Sentiment Breakdown by Platform
+st.subheader("📊 Sentiment Breakdown by Platform")
+sentiment_by_platform = filtered_df.groupby(['Platform', 'Sentiment'])['Mentions'].sum().reset_index()
+fig_sentiment = px.bar(sentiment_by_platform, x='Platform', y='Mentions', color='Sentiment',
+                       barmode='group', color_discrete_map={'Positive': 'red', 'Neutral': 'black', 'Negative': 'gray'})
+st.plotly_chart(fig_sentiment, use_container_width=True)
 
-# Monthly Highlights Table
-st.subheader("📌 Monthly Highlights & Topics")
-st.dataframe(df[['Month', 'Highlight', 'Trending Topics']], use_container_width=True)
+# Mentions Trend Over Time
+st.subheader("📈 Mentions Trend Over Time")
+trend = filtered_df.groupby(['Month'])['Mentions'].sum().reset_index()
+fig_trend = px.line(trend, x='Month', y='Mentions', markers=True)
+st.plotly_chart(fig_trend, use_container_width=True)
+
+# Top Themes
+st.subheader("🔥 Top Discussed Themes")
+themes = filtered_df.groupby(['Theme', 'Sentiment'])['Mentions'].sum().reset_index()
+fig_themes = px.bar(themes, x='Mentions', y='Theme', color='Sentiment', orientation='h',
+                    color_discrete_map={'Positive': 'red', 'Neutral': 'black', 'Negative': 'gray'})
+st.plotly_chart(fig_themes, use_container_width=True)
 
 # Footer
 st.markdown("---")
-st.markdown("Built by Head of Marketing | BR Malaysia · Powered by OpenAI + Streamlit")
+st.markdown("Built for BR Malaysia · Inspired by Nando's SG Dashboard · Powered by Streamlit")
